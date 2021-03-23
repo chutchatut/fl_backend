@@ -115,7 +115,7 @@ def parse_metrics(r):
     return metrics_dct
 
 def parse_losses(r):
-    return re.findall(r'[0-9]+\.[0-9]+', re.findall(TRAIN_CAPTURE, r)[-1])[1]
+    return {"loss": re.findall(r'[0-9]+\.[0-9]+', re.findall(TRAIN_CAPTURE, r)[-1])[1]}
 
 
 def parse_log(log):
