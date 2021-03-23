@@ -51,7 +51,7 @@ def get_clients_status():
         for key2, value in zip(['client name', 'token', 'submitted model'], line.split('|')[1:4]):
             clients_dict[key][key2.strip()] = value.strip()  
     for instance in clients_dict:
-        clients_dict[instance]['train_info'] = get_info(instance)       
+        clients_dict[instance]['train_info'] = get_train_info(instance)       
     return list(clients_dict.values())
 
 def get_server_status():
@@ -132,7 +132,7 @@ def parse_log(log):
     
     return {'round_time': times, 'metrics': metrics}
 
-def get_info(instance):
+def get_train_info(instance):
     log = run(f'cat {instance} log.txt')
     return parse_log(log)
 
