@@ -17,7 +17,7 @@ USERNAME = 'read@gmail.com'
 child = pexpect.spawn(FILEPATH)
 child.expect('User Name:')
 child.sendline(USERNAME)
-child.expect('\r\n>')
+child.expect('\r\n> ')
 
 def run(cmd):
     child.sendline(cmd)
