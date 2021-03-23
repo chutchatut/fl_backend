@@ -21,7 +21,7 @@ child.expect('\r\n> ')
 
 def run(cmd):
     child.sendline(cmd)
-    child.expect('\r\n>')
+    child.expect('\r\n> ')
     return child.before.decode("utf-8") 
 
 def uptime():
