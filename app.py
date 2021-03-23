@@ -49,8 +49,9 @@ def get_clients_status():
     for line in servers[1:]:
         key = line.split('|')[1].strip()
         for key2, value in zip(['client name', 'token', 'submitted model'], line.split('|')[1:4]):
-            clients_dict[key][key2.strip()] = value.strip()
-            
+            clients_dict[key][key2.strip()] = value.strip()  
+    for instance in clients_dict:
+        clients_dict[instance]['train_info'] = get_info(instance)       
     return list(clients_dict.values())
 
 def get_server_status():
@@ -77,6 +78,63 @@ def poll():
             'clients': get_clients_status(),
             'server': get_server_status(),
             }
+
+
+def get_metric_from_text(txt):
+    if 'Epoch' in txt:
+        txt_split = txt.split(' ')
+        txt = txt_split[-2]+' '+txt_split[-1]
+    if txt[-1]=='s':
+        txt = txt[:-1]
+    return txt.split(': ')
+
+EPOCH_TIME_CAPTURE = r"Total time for fitting: \d+.\d+s"
+EPOCH_CAPTURE = r"Epoch: [0-9]+\/[0-9]+, (?:\w+: +[ 0-9]+\.[0-9s ]+)+"
+TRAIN_CAPTURE = r"Epoch: [0-9]+\/[0-9]+, Iter: [0-9]+\/[0-9]+ \[=* *\]  train_accuracy: [0-9]+\.[0-9]+  train_loss: [0-9]+\.[0-9]+  time: [0-9]+\.[0-9]+s"
+
+def parse_rounds(rounds, func):
+    out = []
+    for r in rounds:
+        round_number = int(r.split('\n')[0])
+        try:
+            out.append(func(r))
+            if round_number == 0:
+                break
+        except Exception as e:
+            print('Failed to parse: '+ str(e))
+    return out[::-1]
+
+def parse_time(r):
+    time = re.findall(EPOCH_TIME_CAPTURE, r)[0]
+    time = time.split()[-1][:-1]
+    return time
+
+def parse_metrics(r):
+    metrics = re.findall(EPOCH_CAPTURE, r)[0]
+    metrics_dct = dict([get_metric_from_text(e) for e in metrics.split('  ') if e.strip()!=''])
+    return metrics_dct
+
+def parse_losses(r):
+    return re.findall(r'[0-9]+\.[0-9]+', re.findall(TRAIN_CAPTURE, r)[-1])[1]
+
+
+def parse_log(log):
+    rounds = log.split('Get global model for round:')[:0:-1]
+    
+    times = parse_rounds(rounds, parse_time)
+            
+    metrics = parse_rounds(rounds, parse_metrics)
+            
+    losses = parse_rounds(rounds, parse_losses)
+    
+    for i in range(len(metrics)):
+        metrics[i].update(losses[i]) 
+    
+    return {'round_time': times, 'metrics': metrics}
+
+def get_info(instance):
+    log = run(f'cat {instance} log.txt')
+    return parse_log(log)
 
 @app.route('/')
 @cross_origin()
