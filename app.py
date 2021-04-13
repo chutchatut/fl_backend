@@ -73,10 +73,15 @@ def poll():
     global ret
     while(True):
         sleep(4)
-        ret = {
+        try:
+            ret = {
             'uptime': uptime(),
             'clients': get_clients_status(),
             'server': get_server_status(),
+            }
+        except:
+            ret = {
+                'error':'Can not to connect FL Monitoring Server'
             }
 
 
