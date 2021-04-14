@@ -1,6 +1,14 @@
 from utils.parser import parse_log
 import re
 from utils.errors import ERR_CANNOT_CONNECT
+import datetime
+
+
+def uptime():
+    with open('/proc/uptime', 'r') as f:
+        uptime_sec = float(f.readline().split()[0]) // 1
+        dt = datetime.timedelta(seconds=uptime_sec)
+        return str(dt)
 
 
 def run(cmd, child):

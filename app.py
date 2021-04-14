@@ -2,11 +2,9 @@ from flask import Flask
 from flask_cors import CORS, cross_origin
 import pexpect
 from pexpect.popen_spawn import PopenSpawn
-import datetime
-import re
 from time import sleep
 import threading
-from utils.getter import get_clients_status, get_server_status
+from utils.getter import get_clients_status, get_server_status, uptime
 from utils.errors import ERR_CANNOT_CONNECT
 
 FILEPATH = 'read/startup/fl_admin.sh'
@@ -27,12 +25,6 @@ def init():
     child.expect('\r\n> ')
     return child
 
-
-def uptime():
-    with open('/proc/uptime', 'r') as f:
-        uptime_sec = float(f.readline().split()[0]) // 1
-        dt = datetime.timedelta(seconds=uptime_sec)
-        return str(dt)
 
 def poll():
     global RET
