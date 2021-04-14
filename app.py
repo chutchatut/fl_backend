@@ -11,18 +11,25 @@ app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-FILEPATH = '/home/ubuntu/claratraindevday-latest/FL_COVID/covid_classification/read/startup/fl_admin.sh'
+FILEPATH = 'read/startup/fl_admin.sh'
 USERNAME = 'read@gmail.com'
 
-child = pexpect.spawn(FILEPATH)
-child.expect('User Name:')
-child.sendline(USERNAME)
-child.expect('\r\n> ')
+ERR_CANNOT_CONNECT = 'Cannot connect to FL Model Training Server'
 
-def run(cmd):
+def init():
+    child = pexpect.spawn(FILEPATH)
+    child.expect('User Name:')
+    child.sendline(USERNAME)
+    child.expect('\r\n> ')
+    return child
+
+def run(cmd, child):
     child.sendline(cmd)
     child.expect('\r\n> ')
-    return child.before.decode("utf-8") 
+    ret_msg = child.before.decode("utf-8").strip()
+    if ret_msg.find('Error: not authenticated') != -1 or ret_msg.find('Error: Failed to communicate') != -1:
+        raise Exception(ERR_CANNOT_CONNECT)
+    return ret_msg
 
 def uptime():
     with open('/proc/uptime', 'r') as f:
@@ -30,8 +37,8 @@ def uptime():
         dt = datetime.timedelta(seconds=uptime_sec)
         return str(dt)
 
-def get_clients_status():
-    clients = run('check_status client').split('\r\n')
+def get_clients_status(child):
+    clients = run('check_status client', child).split('\r\n')
     clients = filter(lambda x: 'instance' in x, clients)
     clients_dict = {}
     for line in clients:
@@ -43,7 +50,7 @@ def get_clients_status():
             clients_dict[key] = {}
             for i in range(len(client_data)//2):
                 clients_dict[key][client_data[2*i].strip()] = client_data[2*i+1].strip()
-    servers = run('check_status server').split('\r\n')
+    servers = run('check_status server', child).split('\r\n')
     CAPTURE = re.compile(r'\|[A-Za-z0-9 \-_]*\|[A-Za-z0-9 \-]*\|[A-Za-z0-9 \-]*\|')
     servers = [line for line in servers if CAPTURE.match(line)]
     for line in servers[1:]:
@@ -51,11 +58,11 @@ def get_clients_status():
         for key2, value in zip(['client name', 'token', 'submitted model'], line.split('|')[1:4]):
             clients_dict[key][key2.strip()] = value.strip()  
     for instance in clients_dict:
-        clients_dict[instance]['train_info'] = get_train_info(instance)       
+        clients_dict[instance]['train_info'] = get_train_info(instance, child)       
     return list(clients_dict.values())
 
-def get_server_status():
-    servers = run('check_status server').split('\r\n')
+def get_server_status(child):
+    servers = run('check_status server', child).split('\r\n')
     server_status = {}
     if servers[1].find(':') != -1:
         server_status['run number'] = servers[1].split(':')[1].strip()
@@ -71,18 +78,28 @@ ret = {}
 
 def poll():
     global ret
+    child = None
     while(True):
-        sleep(4)
         try:
+            if child == None:
+                raise Exception(ERR_CANNOT_CONNECT)
             ret = {
-            'uptime': uptime(),
-            'clients': get_clients_status(),
-            'server': get_server_status(),
+                'uptime': uptime(),
+                'clients': get_clients_status(child),
+                'server': get_server_status(child),
             }
-        except:
+        except Exception as e:
             ret = {
-                'error':'Can not to connect FL Monitoring Server'
+                'error': str(e)
             }
+            try:
+                child = init()
+            except:
+                ret = {
+                    'error': ERR_CANNOT_CONNECT
+                }
+        sleep(4)
+            
 
 
 def get_metric_from_text(txt):
@@ -137,8 +154,8 @@ def parse_log(log):
     
     return {'round_time': times, 'metrics': metrics}
 
-def get_train_info(instance):
-    log = run(f'cat {instance} log.txt')
+def get_train_info(instance, child):
+    log = run(f'cat {instance} log.txt', child)
     return parse_log(log)
 
 @app.route('/')
