@@ -48,7 +48,7 @@ def poll():
                 RET = {
                     'error': ERR_CANNOT_CONNECT
                 }
-        sleep(4)
+        sleep(20)
             
 
 @app.route('/')
