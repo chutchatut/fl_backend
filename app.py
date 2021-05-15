@@ -31,8 +31,11 @@ def poll():
     child = None
     while(True):
         try:
-            if child == None:
-                raise Exception(ERR_CANNOT_CONNECT)
+            while child == None:
+                child = init()
+                RET = {
+                    'error': ERR_CANNOT_CONNECT
+                }
             RET = {
                 'uptime': uptime(),
                 'clients': get_clients_status(child),
@@ -41,13 +44,7 @@ def poll():
         except Exception as e:
             RET = {
                 'error': str(e)
-            }
-            try:
-                child = init()
-            except:
-                RET = {
-                    'error': ERR_CANNOT_CONNECT
-                }
+            }           
         sleep(20)
             
 
