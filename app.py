@@ -19,11 +19,14 @@ RET = {}
 
 
 def init():
-    child = pexpect.spawn(FILEPATH)
-    child.expect('User Name:')
-    child.sendline(USERNAME)
-    child.expect('\r\n> ')
-    return child
+    try:
+        child = pexpect.spawn(FILEPATH)
+        child.expect('User Name:')
+        child.sendline(USERNAME)
+        child.expect('\r\n> ')
+        return child
+    except:
+        return None
 
 
 def poll():
