@@ -31,9 +31,9 @@ def init():
 
 def poll():
     global RET
-    child = None
     while(True):
         try:
+            child = None
             while child == None:
                 child = init()
                 RET = {
